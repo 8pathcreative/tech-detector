@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tech Stack Detector</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+    }
+    input {
+      padding: 0.5rem;
+      width: 80%;
+      margin-right: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+    }
+    canvas {
+      margin-top: 2rem;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Website Technology Stack Detector</h1>
+  <p>Enter a website URL below to detect its technology stack and export results as an image.</p>
+  <input type="text" id="urlInput" placeholder="https://example.com" />
+  <button onclick="runDetection()">Analyze</button>
+  <canvas id="resultCanvas"></canvas>
+
+  <script>
+    async function fetchAndInjectHTML(url) {
+      const proxy = 'https://corsproxy.io/?';
+      const response = await fetch(proxy + encodeURIComponent(url));
+      const html = await response.text();
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframe.contentDocument.open();
+      iframe.contentDocument.write(html);
+      iframe.contentDocument.close();
+      return iframe;
+    }
+
+    async function runDetection() {
+      const url = document.getElementById('urlInput').value;
+      if (!url) return alert('Please enter a valid URL');
+      const iframe = await fetchAndInjectHTML(url);
+      const doc = iframe.contentDocument;
+
+      const results = {};
+      const detect = (label, test) => results[label] = test();
+
+      detect('React', () => !!doc.querySelector('[data-reactroot]'));
+      detect('Vue.js', () => !!doc.querySelector('[data-v-]'));
+      detect('Angular', () => !!doc.querySelector('[ng-app]'));
+      detect('Svelte', () => doc.body.innerHTML.includes('__svelte'));
+      detect('Alpine.js', () => !!doc.querySelector('[x-data]'));
+      detect('jQuery', () => doc.body.innerHTML.includes('jQuery'));
+      detect('Next.js', () => !!doc.querySelector('#__next'));
+      detect('Nuxt.js', () => doc.body.innerHTML.includes('__NUXT'));
+      detect('Tailwind CSS', () => {
+        try {
+          return Array.from(doc.styleSheets).some(sheet =>
+            Array.from(sheet.cssRules || []).some(rule => /sm:|md:|lg:/.test(rule.cssText)));
+        } catch { return false; }
+      });
+      detect('Bootstrap', () => !!doc.querySelector('link[href*="bootstrap"]'));
+      detect('Material UI', () => !!doc.querySelector('.MuiButton-root'));
+      detect('Chakra UI', () => doc.body.innerHTML.includes('__chakra_ui__'));
+      detect('WordPress', () => !!doc.querySelector('meta[name="generator"][content*="WordPress"]'));
+      detect('Shopify', () => !!doc.querySelector('script[src*="cdn.shopify.com"]'));
+      detect('Wix', () => !!doc.querySelector('meta[content*="wix.com"]'));
+      detect('Squarespace', () => !!doc.querySelector('meta[content*="Squarespace"]'));
+      detect('Webflow', () => !!doc.querySelector('meta[content*="webflow"]'));
+      detect('Laravel', () => doc.body.innerHTML.includes('laravel'));
+      detect('Rails', () => doc.body.innerHTML.includes('rails'));
+      detect('Flask', () => doc.body.innerHTML.includes('flask'));
+      detect('Django', () => doc.body.innerHTML.includes('django'));
+      detect('Vite', () => !!doc.querySelector('script[src*="@vite"]'));
+      detect('Webpack', () => !!doc.querySelector('script[src*="chunk"]'));
+      detect('Google Analytics', () => !!doc.querySelector('script[src*="google-analytics"]'));
+      detect('Stripe', () => !!doc.querySelector('script[src*="stripe"]'));
+      detect('PayPal', () => !!doc.querySelector('script[src*="paypal"]'));
+
+      document.body.removeChild(iframe);
+      drawResults(results);
+    }
+
+    function drawResults(results) {
+      const canvas = document.getElementById('resultCanvas');
+      const ctx = canvas.getContext('2d');
+      const entries = Object.entries(results);
+      const width = 700;
+      const lineHeight = 30;
+      const height = lineHeight * (entries.length + 1) + 20;
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = '#000';
+      ctx.font = '16px sans-serif';
+
+      ctx.fillText('Technology Detection Results', 20, 25);
+      entries.forEach(([key, val], i) => {
+        const y = 40 + i * lineHeight;
+        ctx.fillStyle = '#000';
+        ctx.fillText(key, 20, y);
+        ctx.fillStyle = val ? 'green' : 'red';
+        ctx.fillText(val ? '✔️' : '❌', width - 40, y);
+      });
+
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/webp');
+      link.download = 'tech-detection.webp';
+      link.click();
+    }
+  </script>
+</body>
+</html>
